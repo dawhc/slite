@@ -2,11 +2,19 @@
 #include "util.h"
 #include "http.h"
 
-int server_init(server_t *server, int port, const char *path) {
+int server_init(server_t *server, int port, char *path, char *cgi_path) {
 
 	server->port = port;
 
-	strcpy(server->path, path);
+	if (path != NULL)
+		strcpy(server->path, path);
+	else
+		strcpy(server->path, ".");
+
+	if (cgi_path != NULL)
+		strcpy(server->cgi_path, cgi_path);
+	else
+		strcpy(server->cgi_path, "cgi-bin");
 	
 	// Init socket
 	if ((server->sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
