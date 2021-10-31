@@ -69,7 +69,7 @@ int server_init(server_t *server, int port, char *path, char *cgi_path) {
 	server_data->fd = server->sock_fd;
 	server_data->epoll_fd = server->epoll_fd;
 	epoll_op(server->epoll_fd, EPOLL_CTL_ADD, server->sock_fd, server_data, EPOLLIN | EPOLLET);
-	
+
 	return 0;
 }
 
@@ -89,20 +89,26 @@ int server_run(server_t *server) {
 
 				struct sockaddr_in client_addr;
 				socklen_t client_addr_size = sizeof(client_addr);
-				int client_fd = accept(fd, (struct sockaddr *)&client_addr, &client_addr_size);
-				if (client_fd < 0) {
-					return -1;
-				}
+                while (1) {
+                    int client_fd = accept(fd, (struct sockaddr *) &client_addr, &client_addr_size);
+                    if (client_fd < 0) {
+                        if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                            break;
+                        } else {
+                            log_error("Failed to accept client");
+                            break;
+                        }
+                    }
 
-				log_info("New conection with fd: %d", client_fd);
-				req_data_t *conn_data = (req_data_t *)malloc(sizeof(req_data_t));
-				init_req(conn_data, server);
-				conn_data->fd = client_fd;
-				conn_data->epoll_fd = server->epoll_fd;
-				epoll_op(server->epoll_fd, EPOLL_CTL_ADD, client_fd, conn_data, EPOLLIN | EPOLLET | EPOLLONESHOT);
+                    log_info("New conection with fd: %d", client_fd);
+                    req_data_t *conn_data = (req_data_t *) malloc(sizeof(req_data_t));
+                    init_req(conn_data, server);
+                    conn_data->fd = client_fd;
+                    conn_data->epoll_fd = server->epoll_fd;
+                    epoll_op(server->epoll_fd, EPOLL_CTL_ADD, client_fd, conn_data, EPOLLIN | EPOLLET | EPOLLONESHOT);
 
-				set_nonblocking(client_fd);
-				// TODO: add timer
+                    set_nonblocking(client_fd);
+                }
 			} else {
 				if ((server->events[i].events & (EPOLLERR | EPOLLHUP)) || 
 						!(server->events[i].events & EPOLLIN)) {

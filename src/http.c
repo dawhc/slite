@@ -1,4 +1,5 @@
 #include "http.h"
+#include "request.h"
 #include "server.h"
 
 header_handler_t header_handlers[] = {
@@ -211,13 +212,13 @@ void * handle_request(void *req) {
 				return NULL;
 			}
 		}
+        init_res(rout);
 		if (!rout->is_keep_alive) {
-			close_req(r);
-			return NULL;
-		}
-		init_res(rout);
+            close_req(r);
+            return NULL;
+        }
 	}
-
+	//close_req(r);
 	epoll_op(r->epoll_fd, EPOLL_CTL_MOD, r->fd, req, EPOLLIN | EPOLLET | EPOLLONESHOT);
 	return NULL;
 }

@@ -24,13 +24,14 @@ void init_req(req_data_t *r, server_t *server) {
 } 
 
 void init_res(res_data_t *r) {
-	memset(r, 0, sizeof(res_data_t));
+	r->is_cgi = 0;
+    r->is_keep_alive = 0;
+    r->fname[0] = '\0';
 	r->modified = 1;
 }
 
 void close_req(req_data_t *r) {
 	log_info("Closing connection with fd %d", r->fd);
-	shutdown(r->fd, SHUT_RDWR);
 	close(r->fd);
 	/*
 	free(r->buf_line);

@@ -14,8 +14,8 @@
 #define SERVER_NAME "slite v1.0"
 #define GATEWAY_INTERFACE "CGI/1.1"
 
-#define THREAD_NUMBER 16
-#define EVENT_NUMBER 1024
+#define THREAD_NUMBER 1
+#define EVENT_NUMBER 1
 
 typedef struct server {
 	int port;
@@ -36,6 +36,10 @@ typedef struct server {
  */
 int server_init(server_t *server, int port, char *path, char *cgi_path);
 
+/*
+ * Run slite server instance
+ * server: server_t type instance
+ */
 int server_run(server_t *server);
 
 #endif
