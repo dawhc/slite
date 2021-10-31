@@ -1,8 +1,8 @@
 #include "server.h"
 
-const char *res_path = "static";
-const char *cgi_path = "cgi-bin";
-const int port = 8888;
+char res_path[] = "static";
+char cgi_path[] = "cgi-bin";
+int port = 8888;
 
 int main() {
 	server_t server;

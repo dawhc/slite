@@ -9,10 +9,14 @@
 /home/gale_force_eight/桌面/webserver/src/http.c
 http.h
 /home/gale_force_eight/桌面/webserver/src/http.h
-request.h
-/home/gale_force_eight/桌面/webserver/src/request.h
+server.h
+/home/gale_force_eight/桌面/webserver/src/server.h
 
 /home/gale_force_eight/桌面/webserver/src/http.h
+unistd.h
+-
+sys/wait.h
+-
 string.h
 -
 stdlib.h
@@ -27,6 +31,8 @@ sys/socket.h
 -
 sys/stat.h
 -
+sys/mman.h
+-
 request.h
 /home/gale_force_eight/桌面/webserver/src/request.h
 util.h
@@ -39,6 +45,8 @@ server.h
 /home/gale_force_eight/桌面/webserver/src/request.c
 request.h
 /home/gale_force_eight/桌面/webserver/src/request.h
+sys/socket.h
+-
 
 /home/gale_force_eight/桌面/webserver/src/request.h
 sys/socket.h
