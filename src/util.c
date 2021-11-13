@@ -60,7 +60,7 @@ ssize_t send_s(int fd, void *data, size_t n)
     char *bufp = (char *)data;
         
     while (nleft > 0) {
-        if ((nsend = send(fd, bufp, nleft, 0)) <= 0) {
+        if ((nsend = write(fd, bufp, nleft)) <= 0) {
             if (errno == EINTR)  /* interrupted by sig handler return */
                 nsend = 0;    /* and call send() again */
             else {

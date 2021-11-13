@@ -13,6 +13,10 @@ request.h
 /home/gale_force_eight/桌面/webserver/src/request.h
 server.h
 /home/gale_force_eight/桌面/webserver/src/server.h
+stdio.h
+-
+unistd.h
+-
 
 /home/gale_force_eight/桌面/webserver/src/http.h
 unistd.h
@@ -114,6 +118,8 @@ fcntl.h
 string.h
 -
 stdio.h
+-
+unistd.h
 -
 errno.h
 -

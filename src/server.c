@@ -59,9 +59,6 @@ int server_init(server_t *server, int port, char *path, char *cgi_path) {
 		return -1;
 	}
 
-
-	// Init timer
-	// TODO: timer
 	
 	// Add socket fd to epoll
 	req_data_t *server_data = (req_data_t *)malloc(sizeof(req_data_t));

@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <errno.h>
 #include <time.h>
 #include <stdarg.h>

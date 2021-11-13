@@ -40,7 +40,7 @@ typedef struct kv_item{
 
 int parse_request(req_data_t *r, int len, res_data_t *rout);
 int parse_header(char *key, char *val, req_data_t *r, res_data_t *rout);
-int parse_uri(char *uri, char *fname, char *root_dir);
+int parse_uri(req_data_t *r, res_data_t *rout);
 int render(req_data_t *r, res_data_t *rout);
 int render_cgi(req_data_t *r, res_data_t *rout);
 int render_error(int fd, int err_code, const char *err_msg);

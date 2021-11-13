@@ -1,6 +1,8 @@
 #include "http.h"
 #include "request.h"
 #include "server.h"
+#include <stdio.h>
+#include <unistd.h>
 
 header_handler_t header_handlers[] = {
 	{"User-Agent", header_handler_ua},
@@ -79,7 +81,7 @@ int parse_request(req_data_t *r, int len, res_data_t *rout) {
 					strcpy(r->uri, r->buf_line);	
 					r->buf_line_idx = 0;
 					r->parse_step = VERSION;
-					err_code = parse_uri(r->uri, rout->fname, r->server->path);
+					err_code = parse_uri(r, rout);
 					if (err_code) return err_code;
 					break;
 				default:
@@ -122,8 +124,8 @@ int parse_request(req_data_t *r, int len, res_data_t *rout) {
 								r->parse_step = BODY;
 							} else {
 								// r->content_data = (char *)realloc(r->content_data, sizeof(char) * len);
-								r->content_idx = len;
-								memcpy(r->content_data, r->buf + r->buf_idx, len);
+								r->content_idx = len - i - 1;
+								memcpy(r->content_data, r->buf + r->buf_idx + 1, len - i - 1);
 								r->parse_step = METHOD;
 								return PARSE_OK;
 							}
@@ -192,11 +194,6 @@ void * handle_request(void *req) {
 		// Parse finished
 		// Try to send pages to client
 		
-		int cgi_path_len = strlen(r->server->cgi_path);
-		if ((int)strlen(r->uri) >= cgi_path_len && strncmp(r->uri, r->server->cgi_path, cgi_path_len) == 0)
-			rout->is_cgi = 1;
-		else 
-			rout->is_cgi = 0;
 		
 
 		if (rout->is_cgi) {
@@ -225,6 +222,8 @@ void * handle_request(void *req) {
 		
 
 int parse_header(char *key, char *val, req_data_t *r, res_data_t *rout) {
+	if (key == NULL || val == NULL || r == NULL || rout == NULL)
+		return -1;
 
 	for (int i = 0; ; ++i) {
 		header_handler_t *handler = &header_handlers[i];
@@ -236,27 +235,44 @@ int parse_header(char *key, char *val, req_data_t *r, res_data_t *rout) {
 	return 0;
 }
 
-int parse_uri(char *uri, char *fname, char *root_dir) {
-	if (uri == NULL)
+int parse_uri(req_data_t *r, res_data_t *rout) {
+	if (r == NULL || rout == NULL)
 		return -1;
-	int len = strlen(uri);
-	char *query_pos = strchr(uri, '?');
-	char *anchor_pos = strchr(uri, '#');
-	if (query_pos != NULL)
-		len = len < (query_pos - uri) ? len : (query_pos - uri);
-	if (anchor_pos != NULL)
-		len = len < (anchor_pos - uri) ? len : (anchor_pos - uri);
 
-	if (len > URI_MAXLEN)
+	int uri_len = strlen(r->uri);
+	int cgi_path_len = strlen(r->server->cgi_path);
+
+	char *uri_valid = r->uri;
+	while (*uri_valid == '/') uri_valid++;
+	
+	if ((int)strlen(uri_valid) >= cgi_path_len && strncmp(uri_valid, r->server->cgi_path, cgi_path_len) == 0) {
+		rout->is_cgi = 1;
+		uri_len -= (uri_valid - r->uri);
+	} else { 
+		rout->is_cgi = 0;
+		uri_valid = r->uri;
+	}
+
+	char *query_pos = strchr(uri_valid, '?');
+	char *anchor_pos = strchr(uri_valid, '#');
+	if (query_pos != NULL)
+		uri_len = uri_len < (query_pos - uri_valid) ? uri_len : (query_pos - uri_valid);
+	if (anchor_pos != NULL)
+		uri_len = uri_len < (anchor_pos - uri_valid) ? uri_len : (anchor_pos - uri_valid);
+
+	if (uri_len > URI_MAXLEN)
 		return PARSE_URI_TOOLONG;
 
-	strcpy(fname, root_dir);
+	if (!rout->is_cgi)
+		strcpy(rout->fname, r->server->path);
 
-	strncat(fname, uri, len);
+	strncat(rout->fname, uri_valid, uri_len);
 
 	return 0;
 }
 int render(req_data_t *r, res_data_t *rout) {
+	if (r == NULL || rout == NULL)
+		return -1;
 
 	int fd = r->fd;
 	char *fname = rout->fname;
@@ -310,21 +326,6 @@ int render(req_data_t *r, res_data_t *rout) {
 
 	int f = open(fname, O_RDONLY, 0);
 	char *faddr = mmap(NULL, finfo.st_size, PROT_READ, MAP_PRIVATE, f, 0);
-	/*
-	if (f == -1)
-		return -1;
-	char read_buf[BUFFER_SIZE];
-	ssize_t cnt = 0;
-	while (cnt < finfo.st_size) {
-		ssize_t n = read(f, read_buf, BUFFER_SIZE);
-		if(n < 0) {
-			close(f);
-			return -1;
-		}
-		if(send_s(fd, read_buf, n) == -1) return -1;
-		cnt += n;
-	}
-	*/
 	close(f);
 	send_s(fd, faddr, finfo.st_size);
 	munmap(faddr, finfo.st_size);
@@ -335,6 +336,8 @@ int render(req_data_t *r, res_data_t *rout) {
 }
 
 int render_cgi(req_data_t *r, res_data_t *rout) {
+	if (r == NULL || rout == NULL)
+		return -1;
 	int fd = r->fd;
 	char *fname = rout->fname;
 	struct stat finfo;
@@ -370,14 +373,14 @@ int render_cgi(req_data_t *r, res_data_t *rout) {
 		
 		dup2(cgi_rpipe[1], STDOUT_FILENO);
 		dup2(cgi_wpipe[0], STDIN_FILENO);
-		close(cgi_rpipe[0]);
-		close(cgi_wpipe[1]);
+		//close(cgi_rpipe[0]);
+		//close(cgi_wpipe[1]);
 		
 		// Change working directory to cgi path
 		chdir(r->server->cgi_path);
 		
 		// Change the relative path of cgi file 
-		for (fname = strstr(fname, r->server->cgi_path); *fname == '/'; fname++);
+		for (fname = strchr(fname, '/'); *fname == '/'; fname++);
 
 		char port_str[10];
 		sprintf(port_str, "%d", r->server->port);
@@ -399,7 +402,10 @@ int render_cgi(req_data_t *r, res_data_t *rout) {
 			setenv("CONTENT_LENGTH", content_length_str, 1);
 		}
 
-		execl(fname, fname, NULL);
+
+		char exec_name[URI_MAXLEN << 1] = "./";
+		strcat(exec_name, fname);
+		execlp(exec_name, exec_name, NULL);
 		exit(-1);
 		
 	} else {
@@ -408,10 +414,13 @@ int render_cgi(req_data_t *r, res_data_t *rout) {
 
 		close(cgi_rpipe[1]);
 		close(cgi_wpipe[0]);
+
+		int code = 200;
+		char msg[50] = "OK";
 		
 		// Send data to CGI executable
 		
-		int n;
+		ssize_t n;
 		char res_buf[BUFFER_SIZE];
 		if (strcmp(r->method, "POST") == 0) {
 			// Send data remaining in buffer to CGI executable
@@ -423,11 +432,15 @@ int render_cgi(req_data_t *r, res_data_t *rout) {
 				n = recv(fd, buf_start, BUFFER_SIZE - r->buf_idx % BUFFER_SIZE, 0);
 
 				if (n == 0) {
+					close(cgi_rpipe[0]);
+					close(cgi_wpipe[1]);
 					kill(pid, SIGKILL);
 					return -1;
 				}
 				if (n < 0) {
 					if (errno != EAGAIN) {
+						close(cgi_rpipe[0]);
+						close(cgi_wpipe[1]);
 						kill(pid, SIGKILL);
 						return -1;
 					}
@@ -439,23 +452,52 @@ int render_cgi(req_data_t *r, res_data_t *rout) {
 			}	
 		}
 		
-		sprintf(res_buf, "HTTP/1.1 200 OK\r\n" \
+		close(cgi_wpipe[1]);
+
+		sprintf(res_buf, "HTTP/1.1 %d %s\r\n" \
 							"Server: " SERVER_NAME "\r\n" \
-							"Connection: %s\r\n",
-							rout->is_keep_alive ? "keep-alive" : "close");
+							"Connection: %s\r\n" \
+							"Transfer-Encoding: chunked\r\n",
+							code, msg, rout->is_keep_alive ? "keep-alive" : "close");
 		
 		// Transfer data from CGI executable to remote
 		if (send_s(fd, res_buf, strlen(res_buf)) == -1) return -1;
-		while((n = read(cgi_rpipe[0], res_buf, BUFFER_SIZE) ) > 0) {
-			if (send_s(fd, res_buf, n) == -1) return -1;
+
+		FILE *f_cgi_rpipe_r = fdopen(cgi_rpipe[0], "r");
+
+		// Read headers from CGI executable
+		while (!feof(f_cgi_rpipe_r)) {
+			char *in = fgets(res_buf, BUFFER_SIZE - 1, f_cgi_rpipe_r);
+			if (!in) {
+				break;
+			}
+			if (!strcmp(in, "\r\n") || !strcmp(in, "\n")) {
+				res_buf[0] = '\0';
+				break;
+			}
+			if (send_s(fd, in, strlen(in)) == -1) return -1;
 		}
 
-		waitpid(pid, NULL, 0);
+		// Read body from CGI executable
+		char size_buf[30];
+		while (!feof(f_cgi_rpipe_r)) {
+			n = fread(res_buf, 1, BUFFER_SIZE - 1, f_cgi_rpipe_r);
+			if (n <= 0) {
+				break;
+			}
+			sprintf(size_buf, "\r\n%zX\r\n", n);
+			if (send_s(fd, size_buf, strlen(size_buf)) == -1) return -1;
+			if (send_s(fd, res_buf, n) == -1) return -1; 
+		}
+		sprintf(size_buf, "\r\n0\r\n\r\n");
+		if (send_s(fd, size_buf, strlen(size_buf)) == -1) return -1;
+		fclose(f_cgi_rpipe_r);
+		int status;
+		waitpid(pid, &status, 0);
 		close(cgi_rpipe[0]);
-		close(cgi_wpipe[1]);
 
-		if (n == -1) 
-			return -1;
+		log_info("CGI executable exited with status %d", status);
+		log_info("Response %d: %s", code, msg);
 	}
 	return 0;
 }
