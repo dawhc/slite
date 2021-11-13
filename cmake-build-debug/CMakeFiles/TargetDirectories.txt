@@ -1,3 +1,0 @@
-/home/gale_force_eight/桌面/webserver/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/gale_force_eight/桌面/webserver/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/gale_force_eight/桌面/webserver/cmake-build-debug/CMakeFiles/server.dir
