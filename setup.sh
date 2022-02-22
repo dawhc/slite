@@ -6,11 +6,11 @@ fi
 
 cd build
 
-type cmake > /dev/null 2>&1 || { echo "cmake is required!" && exit -1 }
+type cmake > /dev/null 2>&1 || ( echo cmake is required! && exit -1 )
 
 cmake .. && make
 cd ..
 
-echo "Done! Run build/server to start slite."
+echo Done! Run build/server to start slite.
 
 
